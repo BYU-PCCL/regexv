@@ -43,8 +43,8 @@ class vecMaster():
         with open(sourcefile,'rb') as myfile:
             data = pkl.load(myfile)
         self.token_list = data['tokens']
-        self.tokens = np.atleast_1d(self.token_list[:500000])
-        self.vectors = data['vectors'][:500000]
+        self.tokens = np.atleast_1d(self.token_list[:1000000])
+        self.vectors = data['vectors'][:1000000]
 
     def validate(self,word_list):
         for w in word_list:
@@ -128,7 +128,9 @@ class vecMaster():
 if __name__ == '__main__':
     v=vecMaster()
     #print(v.mahalanobis_expansion(['beautiful', 'gorgeous', 'handsome', 'studly','hot']))
-    print(v.naive_centroid_expansion(['elderberries', 'strawberries'], k=30))
+    #print(v.naive_centroid_expansion(['red', 'green', 'blue'], k=20))
+    print(v.naive_centroid_expansion(['france', 'germany', 'guatemala'], k=20))
+    print(v.mahalanobis_expansion(['france', 'germany', 'guatemala'], k=20))
     #print(v.mahalanobis_expansion(['red', 'green','blue','yellow','ruby','orange','maroon']))
     #print(v.neighbor_expansion(['red', 'green','blue']))
     #print(v.neighbor_expansion(['beautiful', 'gorgeous']))
