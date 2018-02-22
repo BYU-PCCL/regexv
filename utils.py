@@ -42,38 +42,47 @@ class vecMaster():
         #self.scholar = sch.Scholar()
         with open(sourcefile,'rb') as myfile:
             data = pkl.load(myfile)
-        self.tokens = data['tokens']
+        self.tokens = np.atleast_1d(data['tokens'])
         self.vectors = data['vectors']
-
-    def encode(self,word):
-        pass
-
-    def decode(self,word):
-        pass
 
     def strip_tag(self,word):
         if '_' in word:
             return word[:word.index('_')]
 
-    def expand(self,source_words, expansion_method='nearest_neighbor', epsilon=0.35):
-        word_list = []
-        for source_word in source_words:
-            #try:
-            #    tag = self.scholar.get_most_common_tag(source_word)
-            #    print "Tag is " + tag
-            #    source_vector = self.scholar.model[source_word + '_' + tag]
-            #except:
-            #    raise ValueError("Unable to encode '" + source_word + "'")
-            source_vector = self.vectors[self.tokens.index(source_word)]
+    def neighbor_expansion(self, source_words, epsilon=0.35, distance_metric = 'cosine'):
+        source_vectors = np.array([self.vectors[np.squeeze(np.argwhere(self.tokens == w))] for w in source_words])
+        distances = spatial.distance.cdist(self.vectors,source_vectors, distance_metric)[:,0]
+        return np.squeeze(self.tokens[np.argwhere(distances<epsilon)])
 
-            for i in range(len(self.vectors)):
-                #v=self.scholar.model.vectors[i]
-                v=self.vectors[i]
-                if spatial.distance.cosine(v,source_vector) < epsilon :
-                    word_list.append(self.tokens[i])
-        return "|".join(word_list)
-        
+
+    def mahalanobis_expansion(self, source_words, epsilon=None, sigma=0.001):
+        source_vectors = np.array([self.vectors[np.squeeze(np.argwhere(self.tokens == w))] for w in source_words])
+        c = np.cov(source_vectors.T)
+        c += sigma * np.identity(c.shape[0])
+        c = np.linalg.inv(c) 
+
+        def mahalanobis_squared(u, v, VI=c):
+            delta = u - v
+            return np.dot(np.dot(delta, VI), delta)
+        centroid = np.atleast_2d(np.mean(source_vectors, axis=0))
+        distances = spatial.distance.cdist(self.vectors, centroid, metric=mahalanobis_squared)
+
+        print(source_vectors[:,:10])
+        print(centroid.shape)
+        print(centroid)
+        print(distances.shape)
+        print(distances)
+        if epsilon is None:
+             d = spatial.distance.cdist(source_vectors, centroid, metric=mahalanobis_squared)
+             print("HERE")
+             print(d.shape)
+             print(d)
+             epsilon = np.max(d)
+        print(epsilon)
+        return np.squeeze(self.tokens[np.argwhere(distances<epsilon)])
+
 
 if __name__ == '__main__':
-    #pass
-    create_fasttext_pkl(sourcefile="data/wiki.en.vec")
+    v=vecMaster()
+    #print(v.mahalanobis_expansion(['beautiful', 'gorgeous']))
+    print(v.neighbor_expansion(['beautiful', 'gorgeous']))
