@@ -42,22 +42,40 @@ class vecMaster():
         #self.scholar = sch.Scholar()
         with open(sourcefile,'rb') as myfile:
             data = pkl.load(myfile)
-        self.tokens = np.atleast_1d(data['tokens'])
-        self.vectors = data['vectors']
+        self.token_list = data['tokens']
+        self.tokens = np.atleast_1d(self.token_list[:500000])
+        self.vectors = data['vectors'][:500000]
 
-    def strip_tag(self,word):
-        if '_' in word:
-            return word[:word.index('_')]
+    def validate(self,word_list):
+        for w in word_list:
+            if w not in self.tokens:
+                print("Word " + w + " not found in vector model. Omitting...")
+                word_list.remove(w)
+        return word_list
 
-    def neighbor_expansion(self, source_words, epsilon=0.35, distance_metric = 'cosine'):
-        return source_words
-        # source_vectors = np.array([self.vectors[np.squeeze(np.argwhere(self.tokens == w))] for w in source_words])
-        # distances = spatial.distance.cdist(self.vectors,np.atleast_2d(source_vectors), distance_metric)[:,0]
-        # return np.squeeze(self.tokens[np.argwhere(distances<epsilon)])
-
-
-    def mahalanobis_expansion(self, source_words, epsilon=None, sigma=0.001):
+    def neighbor_expansion(self, source_words, epsilon=0.35, distance_metric = 'cosine', k=None):
+        source_words = self.validate(source_words)
         source_vectors = np.array([self.vectors[np.squeeze(np.argwhere(self.tokens == w))] for w in source_words])
+        distances = spatial.distance.cdist(self.vectors,source_vectors, distance_metric)[:,0]
+        
+        if k is not None:
+            #find the k nearest
+            dist_list = list(distances)
+            word_list = []
+            for i in range(k):
+                minval = min(distances)
+                index = dist_list.index(minval)
+                distances[index] = 10000
+                word_list.append(self.tokens[index])
+            return np.array(word_list)
+        else:
+            return np.squeeze(self.tokens[np.argwhere(distances<epsilon)])
+
+
+    def mahalanobis_expansion(self, source_words, epsilon=0.25, k=None, sigma=1):
+        source_words = self.validate(source_words)
+        source_vectors = np.array([self.vectors[np.squeeze(np.argwhere(self.tokens == w))] for w in source_words])
+
         c = np.cov(source_vectors.T)
         c += sigma * np.identity(c.shape[0])
         c = np.linalg.inv(c) 
@@ -66,24 +84,51 @@ class vecMaster():
             delta = u - v
             return np.dot(np.dot(delta, VI), delta)
         centroid = np.atleast_2d(np.mean(source_vectors, axis=0))
-        distances = spatial.distance.cdist(self.vectors, centroid, metric=mahalanobis_squared)
+        distances = spatial.distance.cdist(self.vectors, centroid, metric=mahalanobis_squared)[:,0]
 
-        print(source_vectors[:,:10])
-        print(centroid.shape)
-        print(centroid)
-        print(distances.shape)
-        print(distances)
-        if epsilon is None:
-             d = spatial.distance.cdist(source_vectors, centroid, metric=mahalanobis_squared)
-             print("HERE")
-             print(d.shape)
-             print(d)
-             epsilon = np.max(d)
-        print(epsilon)
-        return np.squeeze(self.tokens[np.argwhere(distances<epsilon)])
+        if k is not None:
+            #find the k nearest
+            dist_list = list(distances)
+            word_list = []
+            for i in range(k):
+                minval = min(distances)
+                index = dist_list.index(minval)
+                distances[index] = 10000
+                word_list.append(self.tokens[index])
+            return np.array(word_list)
+        else:
+            #find anything within radius epsilon (scaled by mean distance)
+            epsilon = epsilon * np.mean(distances)
+            return np.squeeze(self.tokens[np.argwhere(distances<=epsilon)])
+
+
+    def naive_centroid_expansion(self, source_words, epsilon=0.25, distance_metric='cosine', k=None):
+        source_words = self.validate(source_words)
+        source_vectors = np.array([self.vectors[np.squeeze(np.argwhere(self.tokens == w))] for w in source_words])
+
+        centroid = np.atleast_2d(np.mean(source_vectors, axis=0))
+        distances = spatial.distance.cdist(self.vectors,centroid, distance_metric)[:,0]
+
+        if k is not None:
+            #find the k nearest
+            dist_list = list(distances)
+            word_list = []
+            for i in range(k):
+                minval = min(distances)
+                index = dist_list.index(minval)
+                distances[index] = 10000
+                word_list.append(self.tokens[index])
+            return np.array(word_list)
+        else:
+            #find anything within radius epsilon (scaled by mean distance)
+            epsilon = epsilon * np.mean(distances)
+            return np.squeeze(self.tokens[np.argwhere(distances<=epsilon)])
 
 
 if __name__ == '__main__':
     v=vecMaster()
-    #print(v.mahalanobis_expansion(['beautiful', 'gorgeous']))
-    print(v.neighbor_expansion(['beautiful', 'gorgeous']))
+    #print(v.mahalanobis_expansion(['beautiful', 'gorgeous', 'handsome', 'studly','hot']))
+    print(v.naive_centroid_expansion(['elderberries', 'strawberries'], k=30))
+    #print(v.mahalanobis_expansion(['red', 'green','blue','yellow','ruby','orange','maroon']))
+    #print(v.neighbor_expansion(['red', 'green','blue']))
+    #print(v.neighbor_expansion(['beautiful', 'gorgeous']))
