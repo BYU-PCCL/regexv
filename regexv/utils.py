@@ -50,9 +50,10 @@ class vecMaster():
             return word[:word.index('_')]
 
     def neighbor_expansion(self, source_words, epsilon=0.35, distance_metric = 'cosine'):
-        source_vectors = np.array([self.vectors[np.squeeze(np.argwhere(self.tokens == w))] for w in source_words])
-        distances = spatial.distance.cdist(self.vectors,source_vectors, distance_metric)[:,0]
-        return np.squeeze(self.tokens[np.argwhere(distances<epsilon)])
+        return source_words
+        # source_vectors = np.array([self.vectors[np.squeeze(np.argwhere(self.tokens == w))] for w in source_words])
+        # distances = spatial.distance.cdist(self.vectors,np.atleast_2d(source_vectors), distance_metric)[:,0]
+        # return np.squeeze(self.tokens[np.argwhere(distances<epsilon)])
 
 
     def mahalanobis_expansion(self, source_words, epsilon=None, sigma=0.001):
