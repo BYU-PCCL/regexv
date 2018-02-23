@@ -18,7 +18,7 @@ def wrap(method):
                 continue
 
             m = substring.group(1)
-            words = m.split(",")
+            words = m.split("|")
             words = [word.strip() for word in words]
 
             expanded_words = vec_master.neighbor_expansion(words)
