@@ -44,41 +44,55 @@ class vecMaster():
         with open(sourcefile, 'rb') as myfile:
             data = pkl.load(myfile)
         self.token_list = data['tokens']
-        self.tokens = np.atleast_1d(self.token_list[:1000000])
-        self.vectors = data['vectors'][:1000000]
+        self.tokens = np.atleast_1d(self.token_list[:50000])
+        self.vectors = data['vectors'][:50000]
 
     def validate(self, word_list):
+        valid_words = word_list.copy()
         for w in word_list:
             if w not in self.tokens:
-                print("Word " + w + " not found in vector model. Omitting...")
-                word_list.remove(w)
-        return word_list
+                if ' ' in w:
+                    for sub_w in w.split(' '):
+                        if sub_w not in self.tokens:
+                            print("Word " + w + " not found in vector model. Omitting...")
+                            valid_words.remove(w)
+        return valid_words
 
     def neighbor_expansion(self, source_words, epsilon=0.35, distance_metric='cosine', k=None):
+
         source_words = self.validate(source_words)
-        source_vectors = np.array([self.vectors[np.squeeze(np.argwhere(self.tokens == w))] for w in source_words])
-        distances = spatial.distance.cdist(self.vectors, source_vectors, distance_metric)[:, 0]
+        #source_vectors = np.array([self.vectors[np.squeeze(np.argwhere(self.tokens == w))] for w in source_words])
+        sv = []
+        for w in source_words:
+            #if multiword, then average them
+            if ' ' in w:
+                words = w.split(' ')
+                phrase_vectors = np.array([self.vectors[np.squeeze(np.argwhere(self.tokens == w))] for w in words])
+                sv.append(np.mean(phrase_vectors,axis=0)) 
+            else:
+                #otherwise, take the vector
+                sv.append(self.vectors[np.squeeze(np.argwhere(self.tokens==w))])
+        source_vectors = np.vstack(sv)
+
+
+        print( source_vectors.shape, " yo" )
+        distances = spatial.distance.cdist(self.vectors, source_vectors, distance_metric)[:,0]
 
         if k is not None:
             # find the k nearest
-            dist_list = list(distances)
-            word_list = []
-            for i in range(k):
-                minval = min(distances)
-                index = dist_list.index(minval)
-                distances[index] = 10000
-                word_list.append(self.tokens[index])
-            return np.array(word_list)
+            inds = np.argsort( distances )
+            return np.array( self.tokens[ inds[0:k] ] )
         else:
             return np.squeeze(self.tokens[np.argwhere(distances < epsilon)])
 
-    def mahalanobis_expansion(self, source_words, epsilon=0.25, k=None, sigma=1):
+    def mahalanobis_expansion(self, source_words, epsilon=0.25, k=None, sigma=0.00001):
         source_words = self.validate(source_words)
         source_vectors = np.array([self.vectors[np.squeeze(np.argwhere(self.tokens == w))] for w in source_words])
 
         c = np.cov(source_vectors.T)
         c += sigma * np.identity(c.shape[0])
         c = np.linalg.inv(c)
+        #c = np.linalg.pinv(c)
 
         def mahalanobis_squared(u, v, VI=c):
             delta = u - v
@@ -89,14 +103,8 @@ class vecMaster():
 
         if k is not None:
             # find the k nearest
-            dist_list = list(distances)
-            word_list = []
-            for i in range(k):
-                minval = min(distances)
-                index = dist_list.index(minval)
-                distances[index] = 10000
-                word_list.append(self.tokens[index])
-            return np.array(word_list)
+            inds = np.argsort( distances )
+            return np.array( self.tokens[ inds[0:k] ] )
         else:
             # find anything within radius epsilon (scaled by mean distance)
             epsilon = epsilon * np.mean(distances)
@@ -111,14 +119,8 @@ class vecMaster():
 
         if k is not None:
             # find the k nearest
-            dist_list = list(distances)
-            word_list = []
-            for i in range(k):
-                minval = min(distances)
-                index = dist_list.index(minval)
-                distances[index] = 10000
-                word_list.append(self.tokens[index])
-            return np.array(word_list)
+            inds = np.argsort( distances )
+            return np.array( self.tokens[ inds[0:k] ] )
         else:
             # find anything within radius epsilon (scaled by mean distance)
             epsilon = epsilon * np.mean(distances)
@@ -126,8 +128,20 @@ class vecMaster():
 
 
 if __name__ == '__main__':
-    # print(v.mahalanobis_expansion(['beautiful', 'gorgeous', 'handsome', 'studly','hot']))
-    print(v.naive_centroid_expansion(['elderberries', 'strawberries'], k=30))
-    # print(v.mahalanobis_expansion(['red', 'green','blue','yellow','ruby','orange','maroon']))
-    # print(v.neighbor_expansion(['red', 'green','blue']))
+    v=vecMaster()
+    #print(v.neighbor_expansion(['beautiful', 'gorgeous', 'handsome'], k=30))
+    #print(v.mahalanobis_expansion(['beautiful', 'gorgeous', 'handsome'], k=30))
+    #print(v.neighbor_expansion(['beautiful', 'gorgeous', 'handsome'], k=30))
+    #print(v.mahalanobis_expansion(['beautiful', 'gorgeous', 'handsome', 'studly','hot'],k=20))
+    #print(v.neighbor_expansion(['france', 'germany','guatemala'], k=30))
+    #print(v.mahalanobis_expansion(['france', 'germany','guatemala'], k=30))
+    #print(v.neighbor_expansion(['red', 'green','blue','yellow','ruby','orange','maroon'],k=20))
+    #print(v.mahalanobis_expansion(['red', 'green','blue','yellow','ruby','orange','maroon'],k=20))
     # print(v.neighbor_expansion(['beautiful', 'gorgeous']))
+    # print(v.neighbor_expansion(['red', 'green','blue']))
+    #print(v.neighbor_expansion(['idiot', 'jerk','stupid','dumb','fat','imbecile','imbecilic','sadistic'], k=30))
+    #print(v.neighbor_expansion(['idiot', 'jerk','stupid','dumb','fat','imbecile','imbecilic','sadistic'], k=30))
+    #print(v.mahalanobis_expansion(['idiot', 'jerk','stupid','dumb','fat','imbecile','imbecilic','sadistic'], k=30))
+    print(v.neighbor_expansion(['clever guy'], k=30))
+    #print(v.mahalanobis_expansion(['genius', 'prodigy','innovator'], k=30))
+
