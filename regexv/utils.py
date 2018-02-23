@@ -126,6 +126,25 @@ class vecMaster():
             epsilon = epsilon * np.mean(distances)
             return np.squeeze(self.tokens[np.argwhere(distances <= epsilon)])
 
+    def bounding_box(self, source_words):
+        source_words = self.validate(source_words)
+        source_vectors = np.array([self.vectors[np.squeeze(np.argwhere(self.tokens == w))] for w in source_words])
+
+        min_vector = np.min(source_vectors,axis=0)
+        max_vector = np.max(source_vectors,axis=0)
+
+        print(min_vector)
+        print(max_vector)
+        print(min_vector.shape)
+        print(max_vector.shape)
+    
+        indexes = []
+        for i in range(len(self.tokens)):
+            if (np.all(self.vectors[i] >= min_vector) and np.all(self.vectors[i] <= max_vector)):
+                indexes.append(i)
+        return np.squeeze(self.tokens)[indexes]
+        
+
 
 if __name__ == '__main__':
     v=vecMaster()
@@ -142,6 +161,6 @@ if __name__ == '__main__':
     #print(v.neighbor_expansion(['idiot', 'jerk','stupid','dumb','fat','imbecile','imbecilic','sadistic'], k=30))
     #print(v.neighbor_expansion(['idiot', 'jerk','stupid','dumb','fat','imbecile','imbecilic','sadistic'], k=30))
     #print(v.mahalanobis_expansion(['idiot', 'jerk','stupid','dumb','fat','imbecile','imbecilic','sadistic'], k=30))
-    print(v.neighbor_expansion(['clever guy'], k=30))
+    print(v.bounding_box(['clever','smart','intelligent','red','belligerent','the']))
     #print(v.mahalanobis_expansion(['genius', 'prodigy','innovator'], k=30))
 
