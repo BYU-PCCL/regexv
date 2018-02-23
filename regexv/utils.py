@@ -74,8 +74,6 @@ class vecMaster():
                 sv.append(self.vectors[np.squeeze(np.argwhere(self.tokens==w))])
         source_vectors = np.vstack(sv)
 
-
-        print( source_vectors.shape, " yo" )
         distances = spatial.distance.cdist(self.vectors, source_vectors, distance_metric)[:,0]
 
         if k is not None:

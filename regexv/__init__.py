@@ -18,7 +18,7 @@ def wrap(method):
                 continue
 
             m = substring.group(1)
-            words = m.split("|")
+            words = m.split(",")
             words = [word.strip() for word in words]
 
             expanded_words = vec_master.neighbor_expansion(words)
@@ -27,7 +27,7 @@ def wrap(method):
             last_word_index = pattern.find(words[-1]) + len(words[-1])
 
             expanded_string = pattern[:first_word_index]
-            expanded_string += "|".join(expanded_words)
+            expanded_string += "|".join(list(expanded_words))
             expanded_string += pattern[last_word_index:]
             pattern = expanded_string
 
