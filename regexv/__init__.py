@@ -23,8 +23,8 @@ def wrap(method):
 
             expanded_words = vec_master.neighbor_expansion(words)
 
-            first_word_index = pattern.find(words[0])
-            last_word_index = pattern.find(words[-1]) + len(words[-1])
+            first_word_index = pattern.find(m)
+            last_word_index = first_word_index + len(m)
 
             expanded_string = pattern[:first_word_index]
             expanded_string += "|".join(list(expanded_words))
