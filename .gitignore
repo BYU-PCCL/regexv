@@ -597,3 +597,4 @@ fasttext.wiki.en.vec
 fasttext.en.pkl
 data/
 main.py
+compiler.py
